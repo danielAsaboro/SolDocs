@@ -47,13 +47,14 @@ const MOCK_IDL: AnchorIdl = {
   errors: [{ code: 6000, name: 'Unauthorized', msg: 'Not authorized' }],
 };
 
-function makeConfig(dataDir: string): Config {
+function makeConfig(dataDir: string, webhookUrl: string | null = null): Config {
   return {
     solanaRpcUrl: 'https://api.mainnet-beta.solana.com',
     anthropicApiKey: 'fake-key',
     apiPort: 0,
     agentDiscoveryIntervalMs: 100, // short for testing
     dataDir,
+    webhookUrl,
   };
 }
 
@@ -623,6 +624,164 @@ describe('Agent', () => {
       expect(new Date(runningStartedAt).getTime()).toBeGreaterThanOrEqual(
         new Date(initialStartedAt).getTime()
       );
+    });
+  });
+
+  // ===== WEBHOOK NOTIFICATION TESTS (I4) =====
+
+  describe('webhook notification on doc completion', () => {
+    it('sends POST to WEBHOOK_URL when documentation is generated', async () => {
+      const requests: { url: string; body: unknown }[] = [];
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+        requests.push({ url: url.toString(), body: JSON.parse(init?.body as string) });
+        return new Response('OK', { status: 200 });
+      }) as unknown as typeof fetch;
+
+      try {
+        const webhookConfig = makeConfig(tmpDir, 'https://example.com/webhook');
+        store.saveIdlCache(VALID_ID, MOCK_IDL);
+        store.addToQueue(VALID_ID);
+
+        const agent = new Agent(webhookConfig, store, solana, mockAi as unknown as AIClient);
+        const startPromise = agent.start();
+        await new Promise(r => setTimeout(r, 300));
+        agent.stop();
+        await startPromise;
+
+        // Webhook should have been called once
+        expect(requests.length).toBe(1);
+        expect(requests[0].url).toBe('https://example.com/webhook');
+
+        // Verify payload structure
+        const payload = requests[0].body as Record<string, unknown>;
+        expect(payload.event).toBe('doc.completed');
+        expect(payload.programId).toBe(VALID_ID);
+        expect(payload.name).toBe('test_program');
+        expect(payload.timestamp).toBeTruthy();
+        expect(payload.documentation).toBeDefined();
+
+        const docPayload = payload.documentation as Record<string, unknown>;
+        expect(docPayload.idlHash).toBeTruthy();
+        expect(docPayload.generatedAt).toBeTruthy();
+        expect(typeof docPayload.overview).toBe('string');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('does not send webhook when WEBHOOK_URL is not set', async () => {
+      const originalFetch = globalThis.fetch;
+      const fetchSpy = vi.fn(async () => new Response('OK', { status: 200 }));
+      globalThis.fetch = fetchSpy as unknown as typeof fetch;
+
+      try {
+        // config has webhookUrl: null by default
+        store.saveIdlCache(VALID_ID, MOCK_IDL);
+        store.addToQueue(VALID_ID);
+
+        const agent = new Agent(config, store, solana, mockAi as unknown as AIClient);
+        const startPromise = agent.start();
+        await new Promise(r => setTimeout(r, 300));
+        agent.stop();
+        await startPromise;
+
+        // Docs should be generated but no webhook call
+        expect(store.getDocs(VALID_ID)).not.toBeNull();
+        expect(fetchSpy).not.toHaveBeenCalled();
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('does not fail doc generation when webhook returns error', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(async () => {
+        return new Response('Internal Server Error', { status: 500 });
+      }) as unknown as typeof fetch;
+
+      try {
+        const webhookConfig = makeConfig(tmpDir, 'https://example.com/webhook');
+        store.saveIdlCache(VALID_ID, MOCK_IDL);
+        store.addToQueue(VALID_ID);
+
+        const agent = new Agent(webhookConfig, store, solana, mockAi as unknown as AIClient);
+        const startPromise = agent.start();
+        await new Promise(r => setTimeout(r, 300));
+        agent.stop();
+        await startPromise;
+
+        // Docs should still be generated despite webhook failure
+        const program = store.getProgram(VALID_ID);
+        expect(program).toBeDefined();
+        expect(program!.status).toBe('documented');
+
+        const docs = store.getDocs(VALID_ID);
+        expect(docs).not.toBeNull();
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('does not fail doc generation when webhook network request throws', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(async () => {
+        throw new Error('Network error');
+      }) as unknown as typeof fetch;
+
+      try {
+        const webhookConfig = makeConfig(tmpDir, 'https://example.com/webhook');
+        store.saveIdlCache(VALID_ID, MOCK_IDL);
+        store.addToQueue(VALID_ID);
+
+        const agent = new Agent(webhookConfig, store, solana, mockAi as unknown as AIClient);
+        const startPromise = agent.start();
+        await new Promise(r => setTimeout(r, 300));
+        agent.stop();
+        await startPromise;
+
+        // Docs should still be generated despite network failure
+        const program = store.getProgram(VALID_ID);
+        expect(program).toBeDefined();
+        expect(program!.status).toBe('documented');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('sends separate webhook for each program in multi-program run', async () => {
+      const requests: { url: string; body: unknown }[] = [];
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+        requests.push({ url: url.toString(), body: JSON.parse(init?.body as string) });
+        return new Response('OK', { status: 200 });
+      }) as unknown as typeof fetch;
+
+      try {
+        const webhookConfig = makeConfig(tmpDir, 'https://example.com/hook');
+        store.saveIdlCache(VALID_ID, MOCK_IDL);
+        store.saveIdlCache(VALID_ID2, {
+          ...MOCK_IDL,
+          name: 'phoenix_program',
+          instructions: [{ name: 'swap', accounts: [], args: [] }],
+        });
+        store.addToQueue(VALID_ID);
+        store.addToQueue(VALID_ID2);
+
+        const agent = new Agent(webhookConfig, store, solana, mockAi as unknown as AIClient);
+        const startPromise = agent.start();
+        await new Promise(r => setTimeout(r, 500));
+        agent.stop();
+        await startPromise;
+
+        // Two webhook calls, one per program
+        expect(requests.length).toBe(2);
+        const programIds = requests.map(r => (r.body as Record<string, unknown>).programId);
+        expect(programIds).toContain(VALID_ID);
+        expect(programIds).toContain(VALID_ID2);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
     });
   });
 });

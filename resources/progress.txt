@@ -21,3 +21,22 @@
   - Added import for checkForUpgrades from agent/discovery module
   - All 100 tests pass across 6 test suites, build clean
   - Files changed: src/tests/agent.test.ts
+
+2026-02-13 - Add I4: Webhook notification on doc completion (WEBHOOK_URL env)
+  - Added webhookUrl (string | null) to Config interface, loaded from WEBHOOK_URL env var
+  - Created src/agent/webhook.ts with sendWebhookNotification():
+    - Sends POST with JSON payload: event, programId, name, timestamp, documentation summary
+    - Uses native fetch with 10s timeout via AbortSignal.timeout
+  - Integrated into Agent.processProgram: notifyWebhook() called after docs saved, before queue removal
+    - Webhook errors are caught and logged, never block documentation flow
+  - Added 5 new tests in src/tests/agent.test.ts (webhook notification on doc completion):
+    1. Sends POST to WEBHOOK_URL with correct payload structure
+    2. Does not send webhook when WEBHOOK_URL is not set
+    3. Does not fail doc generation when webhook returns HTTP error
+    4. Does not fail doc generation when webhook network request throws
+    5. Sends separate webhook for each program in multi-program run
+  - Updated .env.example with WEBHOOK_URL documentation
+  - Updated api.test.ts Config to include webhookUrl: null
+  - All 105 tests pass across 6 test suites, build clean
+  - Files changed: src/config.ts, src/agent/webhook.ts (new), src/agent/core.ts,
+    src/tests/agent.test.ts, src/tests/api.test.ts, src/.env.example
