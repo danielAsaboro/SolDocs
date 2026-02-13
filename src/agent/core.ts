@@ -6,7 +6,7 @@ import { DocGenerator } from '../docs/generator';
 import { fetchIdl } from '../solana/idl';
 import { fetchProgramInfo } from '../solana/program-info';
 import { seedQueueIfEmpty, checkForUpgrades } from './discovery';
-import { AgentState, AgentError, getIdlName, Documentation } from '../types';
+import { AgentState, AgentError, QueueItem, getIdlName, Documentation } from '../types';
 import { sendWebhookNotification } from './webhook';
 
 export class Agent {
@@ -102,35 +102,56 @@ export class Agent {
       return;
     }
 
-    console.log(`[Agent] Processing ${pending.length} pending items...`);
+    const concurrency = this.config.agentConcurrency;
+    console.log(`[Agent] Processing ${pending.length} pending items (concurrency=${concurrency})...`);
 
-    for (const item of pending) {
+    // Process in batches of `concurrency`
+    for (let i = 0; i < pending.length; i += concurrency) {
       if (!this.running) break;
 
-      try {
-        await this.processProgram(item.programId);
-      } catch (error) {
-        const msg = (error as Error).message;
-        console.error(`[Agent] Failed to process ${item.programId}: ${msg}`);
-        await this.store.updateQueueItemSafe(item.programId, {
-          status: 'failed',
-          attempts: item.attempts + 1,
-          lastError: msg,
-        });
-        await this.store.saveProgramSafe({
-          programId: item.programId,
-          name: item.programId.slice(0, 8) + '...',
-          description: '',
-          instructionCount: 0,
-          accountCount: 0,
-          status: 'failed',
-          idlHash: '',
-          createdAt: item.addedAt,
-          updatedAt: new Date().toISOString(),
-          errorMessage: msg,
-        });
-        this.addError(item.programId, msg);
+      const batch = pending.slice(i, i + concurrency);
+      const results = await Promise.allSettled(
+        batch.map(item => this.processProgramSafe(item))
+      );
+
+      for (let j = 0; j < results.length; j++) {
+        const result = results[j];
+        if (result.status === 'rejected') {
+          // Shouldn't happen since processProgramSafe catches internally,
+          // but guard against unexpected errors
+          const item = batch[j];
+          const msg = (result.reason as Error).message || 'Unknown error';
+          console.error(`[Agent] Unexpected failure for ${item.programId}: ${msg}`);
+          this.addError(item.programId, msg);
+        }
       }
+    }
+  }
+
+  private async processProgramSafe(item: QueueItem): Promise<void> {
+    try {
+      await this.processProgram(item.programId);
+    } catch (error) {
+      const msg = (error as Error).message;
+      console.error(`[Agent] Failed to process ${item.programId}: ${msg}`);
+      await this.store.updateQueueItemSafe(item.programId, {
+        status: 'failed',
+        attempts: item.attempts + 1,
+        lastError: msg,
+      });
+      await this.store.saveProgramSafe({
+        programId: item.programId,
+        name: item.programId.slice(0, 8) + '...',
+        description: '',
+        instructionCount: 0,
+        accountCount: 0,
+        status: 'failed',
+        idlHash: '',
+        createdAt: item.addedAt,
+        updatedAt: new Date().toISOString(),
+        errorMessage: msg,
+      });
+      this.addError(item.programId, msg);
     }
   }
 

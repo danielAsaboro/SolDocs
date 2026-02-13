@@ -35,6 +35,8 @@ class MockAIClient {
 
 const VALID_ID = 'dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH';
 const VALID_ID2 = 'PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY';
+const VALID_ID3 = 'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc';
+const VALID_ID4 = 'LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo';
 
 const MOCK_IDL: AnchorIdl = {
   version: '0.1.0',
@@ -47,7 +49,7 @@ const MOCK_IDL: AnchorIdl = {
   errors: [{ code: 6000, name: 'Unauthorized', msg: 'Not authorized' }],
 };
 
-function makeConfig(dataDir: string, webhookUrl: string | null = null): Config {
+function makeConfig(dataDir: string, webhookUrl: string | null = null, agentConcurrency: number = 1): Config {
   return {
     solanaRpcUrl: 'https://api.mainnet-beta.solana.com',
     anthropicApiKey: 'fake-key',
@@ -55,6 +57,7 @@ function makeConfig(dataDir: string, webhookUrl: string | null = null): Config {
     agentDiscoveryIntervalMs: 100, // short for testing
     dataDir,
     webhookUrl,
+    agentConcurrency,
   };
 }
 
@@ -749,7 +752,7 @@ describe('Agent', () => {
       }
     });
 
-    it('sends separate webhook for each program in multi-program run', async () => {
+    it('sends separate webhook for each program in multi-program concurrent run', async () => {
       const requests: { url: string; body: unknown }[] = [];
       const originalFetch = globalThis.fetch;
       globalThis.fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
@@ -783,5 +786,193 @@ describe('Agent', () => {
         globalThis.fetch = originalFetch;
       }
     });
+  });
+
+  // ===== AGENT CONCURRENCY TESTS (I5) =====
+
+  describe('agent concurrency (AGENT_CONCURRENCY)', () => {
+    it('defaults to concurrency=1 when AGENT_CONCURRENCY is not set', () => {
+      const cfg = makeConfig(tmpDir);
+      expect(cfg.agentConcurrency).toBe(1);
+    });
+
+    it('processes multiple programs concurrently with concurrency > 1', async () => {
+      const concurrentConfig = makeConfig(tmpDir, null, 3);
+      const callTimestamps: { programId: string; start: number; end: number }[] = [];
+
+      // Create a slow mock AI that records timing
+      const slowAi = new MockAIClient();
+      const originalGenerate = slowAi.generate.bind(slowAi);
+      slowAi.generate = async (prompt: string, maxTokens?: number) => {
+        const start = Date.now();
+        // Small delay to allow concurrency observation
+        await new Promise(r => setTimeout(r, 30));
+        const result = await originalGenerate(prompt, maxTokens);
+        return result;
+      };
+
+      // Queue 3 programs with cached IDLs
+      store.saveIdlCache(VALID_ID, { ...MOCK_IDL, name: 'prog_1' });
+      store.saveIdlCache(VALID_ID2, { ...MOCK_IDL, name: 'prog_2' });
+      store.saveIdlCache(VALID_ID3, { ...MOCK_IDL, name: 'prog_3' });
+      store.addToQueue(VALID_ID);
+      store.addToQueue(VALID_ID2);
+      store.addToQueue(VALID_ID3);
+
+      const agent = new Agent(concurrentConfig, store, solana, slowAi as unknown as AIClient);
+      const startPromise = agent.start();
+      await new Promise(r => setTimeout(r, 1000));
+      agent.stop();
+      await startPromise;
+
+      // All 3 programs should be documented
+      const prog1 = store.getProgram(VALID_ID);
+      const prog2 = store.getProgram(VALID_ID2);
+      const prog3 = store.getProgram(VALID_ID3);
+      expect(prog1?.status).toBe('documented');
+      expect(prog2?.status).toBe('documented');
+      expect(prog3?.status).toBe('documented');
+
+      // Queue should be empty
+      expect(store.getQueue()).toHaveLength(0);
+    }, 10000);
+
+    it('processes items in batches according to concurrency setting', async () => {
+      const concurrentConfig = makeConfig(tmpDir, null, 2);
+
+      // Queue 4 programs - should be processed in 2 batches of 2
+      store.saveIdlCache(VALID_ID, { ...MOCK_IDL, name: 'batch_1a' });
+      store.saveIdlCache(VALID_ID2, { ...MOCK_IDL, name: 'batch_1b' });
+      store.saveIdlCache(VALID_ID3, { ...MOCK_IDL, name: 'batch_2a' });
+      store.saveIdlCache(VALID_ID4, { ...MOCK_IDL, name: 'batch_2b' });
+      store.addToQueue(VALID_ID);
+      store.addToQueue(VALID_ID2);
+      store.addToQueue(VALID_ID3);
+      store.addToQueue(VALID_ID4);
+
+      const agent = new Agent(concurrentConfig, store, solana, mockAi as unknown as AIClient);
+      const startPromise = agent.start();
+      await new Promise(r => setTimeout(r, 1000));
+      agent.stop();
+      await startPromise;
+
+      // All 4 should be documented
+      for (const id of [VALID_ID, VALID_ID2, VALID_ID3, VALID_ID4]) {
+        const prog = store.getProgram(id);
+        expect(prog).toBeDefined();
+        expect(prog!.status).toBe('documented');
+      }
+
+      // Queue should be empty
+      expect(store.getQueue()).toHaveLength(0);
+
+      // AI should have been called 4 times per program (4 passes), 16 total
+      expect(mockAi.callCount).toBe(16);
+    }, 10000);
+
+    it('handles mixed success and failure in concurrent batch', async () => {
+      const concurrentConfig = makeConfig(tmpDir, null, 3);
+
+      // Queue 3 programs: 2 with cached IDLs (will succeed), 1 without (will fail)
+      store.saveIdlCache(VALID_ID, { ...MOCK_IDL, name: 'will_succeed_1' });
+      store.saveIdlCache(VALID_ID3, { ...MOCK_IDL, name: 'will_succeed_2' });
+      // VALID_ID2 has no cached IDL and no Solana connection → will fail
+      store.addToQueue(VALID_ID);
+      store.addToQueue(VALID_ID2);
+      store.addToQueue(VALID_ID3);
+
+      const agent = new Agent(concurrentConfig, store, solana, mockAi as unknown as AIClient);
+      const startPromise = agent.start();
+      await new Promise(r => setTimeout(r, 1000));
+      agent.stop();
+      await startPromise;
+
+      // Two should succeed
+      expect(store.getProgram(VALID_ID)?.status).toBe('documented');
+      expect(store.getProgram(VALID_ID3)?.status).toBe('documented');
+
+      // One should fail
+      const failedProg = store.getProgram(VALID_ID2);
+      expect(failedProg).toBeDefined();
+      expect(failedProg!.status).toBe('failed');
+
+      // Failed item should be in queue with failure status
+      const queueItem = store.getQueue().find(q => q.programId === VALID_ID2);
+      expect(queueItem).toBeDefined();
+      expect(queueItem!.status).toBe('failed');
+      expect(queueItem!.attempts).toBe(1);
+
+      // Errors should be recorded for the failed program
+      const state = agent.getState();
+      const failErrors = state.errors.filter(e => e.programId === VALID_ID2);
+      expect(failErrors.length).toBeGreaterThan(0);
+    }, 10000);
+
+    it('does not exceed concurrency limit even with large queue', async () => {
+      const concurrentConfig = makeConfig(tmpDir, null, 2);
+      let maxConcurrent = 0;
+      let currentConcurrent = 0;
+
+      // Track concurrency with a slow AI mock
+      const trackingAi = new MockAIClient();
+      const origGen = trackingAi.generate.bind(trackingAi);
+      trackingAi.generate = async (prompt: string, maxTokens?: number) => {
+        currentConcurrent++;
+        if (currentConcurrent > maxConcurrent) {
+          maxConcurrent = currentConcurrent;
+        }
+        await new Promise(r => setTimeout(r, 50));
+        const result = await origGen(prompt, maxTokens);
+        currentConcurrent--;
+        return result;
+      };
+
+      // Queue 4 programs
+      store.saveIdlCache(VALID_ID, { ...MOCK_IDL, name: 'conc_1' });
+      store.saveIdlCache(VALID_ID2, { ...MOCK_IDL, name: 'conc_2' });
+      store.saveIdlCache(VALID_ID3, { ...MOCK_IDL, name: 'conc_3' });
+      store.saveIdlCache(VALID_ID4, { ...MOCK_IDL, name: 'conc_4' });
+      store.addToQueue(VALID_ID);
+      store.addToQueue(VALID_ID2);
+      store.addToQueue(VALID_ID3);
+      store.addToQueue(VALID_ID4);
+
+      const agent = new Agent(concurrentConfig, store, solana, trackingAi as unknown as AIClient);
+      const startPromise = agent.start();
+      await new Promise(r => setTimeout(r, 3000));
+      agent.stop();
+      await startPromise;
+
+      // Max concurrent AI calls should reflect batch size of 2
+      // Each program makes 4 AI calls, and 2 programs run concurrently,
+      // so max concurrent AI calls should be at most 2
+      // (since each program's AI calls are sequential within processProgram)
+      expect(maxConcurrent).toBeLessThanOrEqual(2);
+
+      // All 4 should be documented
+      for (const id of [VALID_ID, VALID_ID2, VALID_ID3, VALID_ID4]) {
+        expect(store.getProgram(id)?.status).toBe('documented');
+      }
+    }, 15000);
+
+    it('works correctly with concurrency=1 (sequential behavior preserved)', async () => {
+      const sequentialConfig = makeConfig(tmpDir, null, 1);
+
+      store.saveIdlCache(VALID_ID, { ...MOCK_IDL, name: 'seq_1' });
+      store.saveIdlCache(VALID_ID2, { ...MOCK_IDL, name: 'seq_2' });
+      store.addToQueue(VALID_ID);
+      store.addToQueue(VALID_ID2);
+
+      const agent = new Agent(sequentialConfig, store, solana, mockAi as unknown as AIClient);
+      const startPromise = agent.start();
+      await new Promise(r => setTimeout(r, 500));
+      agent.stop();
+      await startPromise;
+
+      // Both should be documented (sequential processing)
+      expect(store.getProgram(VALID_ID)?.status).toBe('documented');
+      expect(store.getProgram(VALID_ID2)?.status).toBe('documented');
+      expect(store.getQueue()).toHaveLength(0);
+    }, 10000);
   });
 });

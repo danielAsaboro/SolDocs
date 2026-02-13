@@ -60,6 +60,7 @@ describe('API Routes', () => {
         agentDiscoveryIntervalMs: 999999,
         dataDir: tmpDir,
         webhookUrl: null,
+        agentConcurrency: 1,
       },
       store, solana, ai
     );

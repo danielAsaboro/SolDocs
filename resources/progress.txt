@@ -40,3 +40,24 @@
   - All 105 tests pass across 6 test suites, build clean
   - Files changed: src/config.ts, src/agent/webhook.ts (new), src/agent/core.ts,
     src/tests/agent.test.ts, src/tests/api.test.ts, src/.env.example
+
+2026-02-13 - Add I5: Agent concurrency (AGENT_CONCURRENCY env, Promise.allSettled)
+  - Added agentConcurrency (number) to Config interface, loaded from AGENT_CONCURRENCY env var
+    - Defaults to 1, enforces minimum of 1 via Math.max
+  - Refactored Agent.processQueue to process items in batches using Promise.allSettled:
+    - Splits pending items into batches of size `agentConcurrency`
+    - Each batch runs concurrently via Promise.allSettled (no single failure blocks others)
+    - Extracted processProgramSafe() method to handle per-item error catching
+  - Added QueueItem to agent/core.ts imports for type safety
+  - Added 6 new tests in src/tests/agent.test.ts (agent concurrency):
+    1. Defaults to concurrency=1 when AGENT_CONCURRENCY not set
+    2. Processes multiple programs concurrently with concurrency > 1
+    3. Processes items in batches according to concurrency setting
+    4. Handles mixed success and failure in concurrent batch
+    5. Does not exceed concurrency limit even with large queue
+    6. Works correctly with concurrency=1 (sequential behavior preserved)
+  - Updated .env.example with AGENT_CONCURRENCY documentation
+  - Updated api.test.ts Config to include agentConcurrency: 1
+  - All 111 tests pass across 6 test suites, build clean
+  - Files changed: src/config.ts, src/agent/core.ts, src/tests/agent.test.ts,
+    src/tests/api.test.ts, src/.env.example

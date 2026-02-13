@@ -10,6 +10,7 @@ export interface Config {
   agentDiscoveryIntervalMs: number;
   dataDir: string;
   webhookUrl: string | null;
+  agentConcurrency: number;
 }
 
 function requireEnv(name: string): string {
@@ -28,5 +29,6 @@ export function loadConfig(): Config {
     agentDiscoveryIntervalMs: parseInt(process.env.AGENT_DISCOVERY_INTERVAL_MS || '300000', 10),
     dataDir: path.join(__dirname, 'data'),
     webhookUrl: process.env.WEBHOOK_URL || null,
+    agentConcurrency: Math.max(1, parseInt(process.env.AGENT_CONCURRENCY || '1', 10)),
   };
 }
