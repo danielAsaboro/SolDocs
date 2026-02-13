@@ -1,0 +1,18 @@
+services:
+  soldocs:
+    build: .
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - API_PORT=3000
+      - AGENT_DISCOVERY_INTERVAL_MS=${AGENT_DISCOVERY_INTERVAL_MS:-300000}
+      - AGENT_CONCURRENCY=${AGENT_CONCURRENCY:-1}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+    volumes:
+      - soldocs-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  soldocs-data:

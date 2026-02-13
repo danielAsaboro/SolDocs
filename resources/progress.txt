@@ -72,3 +72,26 @@
     - GET /api/health returns 200 with {status: "ok"}
   - No issues found, no code changes required
   - Files changed: resources/PRD.md (task marked complete)
+
+2026-02-13 - Prepare deployment artifacts (Dockerfile, docker-compose, README update)
+  - Improved Dockerfile with multi-stage build enhancements:
+    - Added npm prune --production to strip devDependencies from final image
+    - Added non-root user (soldocs) for security
+    - Added HEALTHCHECK on /api/health (30s interval, 5s timeout, 3 retries)
+    - Renamed build stage from "base" to "build" for clarity
+  - Created .dockerignore to exclude node_modules, .git, resources, chats from build context
+  - Created docker-compose.yml:
+    - Single soldocs service with all env vars passed through from host .env
+    - Named volume (soldocs-data) for persistent data across restarts
+    - restart: unless-stopped policy
+    - Configurable host port via API_PORT env var (default 3000)
+  - Updated README.md:
+    - Added Docker Compose deployment section with cp .env, up/logs/down commands
+    - Added AGENT_CONCURRENCY and WEBHOOK_URL to Configuration table
+    - Added webhook.ts to project structure tree
+    - Updated test counts: 111 tests across 6 suites (was 64 across 5)
+    - Added agent test suite description (36 tests)
+    - Updated store test description to mention mutex locking
+  - All 111 tests pass across 6 test suites, TypeScript build clean
+  - Files changed: Dockerfile, .dockerignore (new), docker-compose.yml (new), README.md,
+    resources/PRD.md (task marked complete)

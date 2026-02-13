@@ -1,0 +1,11 @@
+node_modules/
+src/node_modules/
+src/dist/
+src/data/
+src/.env
+chats/
+resources/
+*.md
+!README.md
+.git/
+.gitignore

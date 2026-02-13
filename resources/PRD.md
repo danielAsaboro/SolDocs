@@ -5,4 +5,4 @@
 - [x] Add I4: Webhook notification on doc completion (WEBHOOK_URL env)
 - [x] Add I5: Agent concurrency (AGENT_CONCURRENCY env, Promise.allSettled)
 - [x] Verify all tests pass (75+), build clean, web UI loads
-- [ ] Prepare deployment artifacts (Dockerfile, docker-compose, README update)
+- [x] Prepare deployment artifacts (Dockerfile, docker-compose, README update)
