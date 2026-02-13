@@ -1,0 +1,23 @@
+2026-02-13 - Fix B4: Race condition in src/store/index.ts
+  - Added FileMutex class with per-file async locking (promise-chaining pattern)
+  - Added *Safe async variants for all read-modify-write Store methods:
+    saveProgramSafe, removeProgramSafe, addToQueueSafe,
+    updateQueueItemSafe, removeFromQueueSafe
+  - Updated agent/core.ts to use *Safe methods for all store mutations
+  - Updated api/routes.ts to use async handlers with *Safe methods
+  - Added 11 new tests: 7 for Store mutex integration, 4 for FileMutex unit tests
+  - Files changed: src/store/index.ts, src/agent/core.ts, src/api/routes.ts, src/tests/store.test.ts
+
+2026-02-13 - Add T7: Agent tests in src/tests/agent.test.ts
+  - Added 12 new tests (25 total, up from 13) across 7 new describe blocks:
+    1. AI failure handling: verifies program marked failed when AI throws
+    2. Error cap enforcement: confirms errors array capped at 50 entries
+    3. Discovery seeding (2 tests): validates queue seeding on first start, skips when queue non-empty
+    4. Documentation content structure (2 tests): validates all 4 doc sections populated, correct program metadata
+    5. IDL change detection (2 tests): first-time doc generation with cached IDL, checkForUpgrades returns only documented programs
+    6. Queue behavior during processing (2 tests): graceful stop mid-queue, attempt count incrementing on failure
+    7. State sync with store: getState reflects external store mutations
+    8. StartedAt tracking: validates startedAt updates when agent starts
+  - Added import for checkForUpgrades from agent/discovery module
+  - All 100 tests pass across 6 test suites, build clean
+  - Files changed: src/tests/agent.test.ts
