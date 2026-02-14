@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { validateConnections } from '../index';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { validateConnections, createShutdown, SHUTDOWN_TIMEOUT_MS } from '../index';
 import { SolanaClient } from '../solana/client';
 import { Config } from '../config';
+import http from 'http';
 
 function makeConfig(overrides: Partial<Config> = {}): Config {
   return {
@@ -86,5 +87,85 @@ describe('validateConnections', () => {
     await validateConnections(solana, config);
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('2.1.5'));
+  });
+});
+
+describe('createShutdown', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let consoleSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockAgent: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockServer: any;
+
+  beforeEach(() => {
+    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.useFakeTimers();
+    mockAgent = { stop: vi.fn() };
+    mockServer = { close: vi.fn((cb?: () => void) => { if (cb) cb(); }) };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('exports SHUTDOWN_TIMEOUT_MS as 5000', () => {
+    expect(SHUTDOWN_TIMEOUT_MS).toBe(5000);
+  });
+
+  it('calls agent.stop() when shutdown is triggered', () => {
+    const shutdown = createShutdown(
+      mockAgent as unknown as import('../agent/core').Agent,
+      mockServer as unknown as http.Server,
+    );
+    shutdown();
+    expect(mockAgent.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls server.close() when shutdown is triggered', () => {
+    const shutdown = createShutdown(
+      mockAgent as unknown as import('../agent/core').Agent,
+      mockServer as unknown as http.Server,
+    );
+    shutdown();
+    expect(mockServer.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs shutdown messages', () => {
+    const shutdown = createShutdown(
+      mockAgent as unknown as import('../agent/core').Agent,
+      mockServer as unknown as http.Server,
+    );
+    shutdown();
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Gracefully shutting down'));
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('HTTP server closed'));
+  });
+
+  it('ignores duplicate shutdown signals (double Ctrl+C guard)', () => {
+    const shutdown = createShutdown(
+      mockAgent as unknown as import('../agent/core').Agent,
+      mockServer as unknown as http.Server,
+    );
+    shutdown();
+    shutdown(); // second call should be ignored
+    expect(mockAgent.stop).toHaveBeenCalledTimes(1);
+    expect(mockServer.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('schedules process.exit after SHUTDOWN_TIMEOUT_MS', () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const shutdown = createShutdown(
+      mockAgent as unknown as import('../agent/core').Agent,
+      mockServer as unknown as http.Server,
+    );
+    shutdown();
+
+    // Before timeout — exit not called yet
+    expect(exitSpy).not.toHaveBeenCalled();
+
+    // Advance past the timeout
+    vi.advanceTimersByTime(SHUTDOWN_TIMEOUT_MS);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+    exitSpy.mockRestore();
   });
 });

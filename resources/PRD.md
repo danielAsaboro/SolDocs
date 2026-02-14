@@ -15,3 +15,4 @@
 - [x] Add T10: Webhook module tests in `src/tests/webhook.test.ts` (19 tests for payload structure, error handling, edge cases)
 - [x] Add T11: Expanded DocGenerator + prompt template tests in `src/tests/generator.test.ts` (40 new tests for error propagation, markdown structure, validation warnings, batch separators, prompt content)
 - [x] Fix B7: Config NaN bug — non-numeric env vars (API_PORT, AGENT_CONCURRENCY, etc.) silently produce NaN instead of falling back to defaults
+- [x] Fix B8: Graceful shutdown — wait for in-flight work, close HTTP server, exit on agent crash, prevent double-signal

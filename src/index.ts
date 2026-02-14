@@ -1,3 +1,4 @@
+import http from 'http';
 import { loadConfig, Config } from './config';
 import { Store } from './store';
 import { SolanaClient } from './solana/client';
@@ -25,6 +26,38 @@ export async function validateConnections(solana: SolanaClient, config: Config):
   } else {
     console.log('[Startup] Anthropic API key format OK');
   }
+}
+
+/** Max time to wait for in-flight work to finish during shutdown */
+export const SHUTDOWN_TIMEOUT_MS = 5000;
+
+/**
+ * Creates a graceful shutdown handler that:
+ * 1. Stops the agent loop (no new batches start)
+ * 2. Closes the HTTP server (stops accepting new connections)
+ * 3. Waits briefly for in-flight work to drain
+ * 4. Exits cleanly
+ */
+export function createShutdown(agent: Agent, server: http.Server): () => void {
+  let shuttingDown = false;
+
+  return () => {
+    // Guard against double-signal (e.g., rapid Ctrl+C twice)
+    if (shuttingDown) return;
+    shuttingDown = true;
+
+    console.log('\n[Shutdown] Gracefully shutting down...');
+    agent.stop();
+    server.close(() => {
+      console.log('[Shutdown] HTTP server closed');
+    });
+
+    // Give in-flight work time to finish, then force exit
+    setTimeout(() => {
+      console.log('[Shutdown] Shutdown complete');
+      process.exit(0);
+    }, SHUTDOWN_TIMEOUT_MS).unref();
+  };
 }
 
 async function main() {
@@ -55,22 +88,20 @@ async function main() {
 
   // Start API server
   const app = createServer(store, agent);
-  await startServer(app, config.apiPort);
+  const server = await startServer(app, config.apiPort);
 
-  // Start autonomous agent loop in background
-  agent.start().catch(err => {
-    console.error('[Fatal] Agent crashed:', err);
-  });
-
-  // Graceful shutdown
-  const shutdown = () => {
-    console.log('\n[Shutdown] Gracefully shutting down...');
-    agent.stop();
-    process.exit(0);
-  };
-
+  // Graceful shutdown on signals
+  const shutdown = createShutdown(agent, server);
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
+
+  // Start autonomous agent loop in background
+  // If the agent loop crashes, the process must exit — a running API server
+  // with a dead agent is worse than a clean restart.
+  agent.start().catch(err => {
+    console.error('[Fatal] Agent crashed:', err);
+    process.exit(1);
+  });
 }
 
 main().catch(err => {

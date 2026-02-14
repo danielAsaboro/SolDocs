@@ -276,3 +276,29 @@
   - All 243 tests pass across 10 test suites, TypeScript build clean
   - Files changed: src/config.ts, src/tests/config.test.ts, README.md,
     resources/PRD.md (task added + marked complete), resources/progress.txt
+
+2026-02-14 - Fix B8: Graceful shutdown — wait for in-flight work, close HTTP server, exit on agent crash
+  - Root cause: process.exit(0) was called immediately after agent.stop() with no wait
+    - In-flight file writes could be interrupted (truncated docs, orphaned .tmp files)
+    - HTTP server kept accepting requests while agent was stopping
+    - Agent loop crash (agent.start() rejection) was only logged, not fatal
+    - Double SIGINT/SIGTERM could trigger multiple shutdown sequences
+  - Created createShutdown() exported factory function in src/index.ts:
+    - Stops agent loop via agent.stop()
+    - Closes HTTP server via server.close() (stops accepting new connections)
+    - Waits SHUTDOWN_TIMEOUT_MS (5s) for in-flight work to drain before process.exit(0)
+    - Guards against double-signal with shuttingDown flag
+  - Changed startServer() return type from Promise<void> to Promise<http.Server>
+    - Returns the http.Server instance so shutdown handler can close it
+  - Made agent.start() crash fatal: unhandled rejection now calls process.exit(1)
+    - A running API server with a dead agent is worse than a clean restart
+  - Added 6 new tests in src/tests/startup.test.ts (createShutdown):
+    1. Exports SHUTDOWN_TIMEOUT_MS as 5000
+    2. Calls agent.stop() when shutdown is triggered
+    3. Calls server.close() when shutdown is triggered
+    4. Logs shutdown messages (graceful + HTTP server closed)
+    5. Ignores duplicate shutdown signals (double Ctrl+C guard)
+    6. Schedules process.exit(0) after SHUTDOWN_TIMEOUT_MS
+  - All 249 tests pass across 10 test suites, TypeScript build clean
+  - Files changed: src/index.ts, src/api/server.ts, src/tests/startup.test.ts,
+    README.md, resources/PRD.md (task added + marked complete), resources/progress.txt
