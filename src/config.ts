@@ -21,14 +21,20 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function safeParseInt(value: string | undefined, defaultValue: number): number {
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? defaultValue : parsed;
+}
+
 export function loadConfig(): Config {
   return {
     solanaRpcUrl: requireEnv('SOLANA_RPC_URL'),
     anthropicApiKey: requireEnv('ANTHROPIC_API_KEY'),
-    apiPort: parseInt(process.env.API_PORT || '3000', 10),
-    agentDiscoveryIntervalMs: parseInt(process.env.AGENT_DISCOVERY_INTERVAL_MS || '300000', 10),
+    apiPort: safeParseInt(process.env.API_PORT, 3000),
+    agentDiscoveryIntervalMs: safeParseInt(process.env.AGENT_DISCOVERY_INTERVAL_MS, 300000),
     dataDir: path.join(__dirname, 'data'),
     webhookUrl: process.env.WEBHOOK_URL || null,
-    agentConcurrency: Math.max(1, parseInt(process.env.AGENT_CONCURRENCY || '1', 10)),
+    agentConcurrency: Math.max(1, safeParseInt(process.env.AGENT_CONCURRENCY, 1)),
   };
 }

@@ -155,36 +155,47 @@ describe('Config', () => {
     });
   });
 
-  describe('parseInt edge cases', () => {
+  describe('non-numeric environment variable handling', () => {
     it('parses API_PORT with leading zeros', () => {
       process.env.API_PORT = '03000';
       const config = loadConfig();
       expect(config.apiPort).toBe(3000);
     });
 
-    it('returns NaN for non-numeric API_PORT', () => {
+    it('falls back to default 3000 for non-numeric API_PORT', () => {
       process.env.API_PORT = 'abc';
       const config = loadConfig();
-      expect(config.apiPort).toBeNaN();
+      expect(config.apiPort).toBe(3000);
     });
 
-    it('returns NaN for non-numeric AGENT_DISCOVERY_INTERVAL_MS', () => {
+    it('falls back to default 300000 for non-numeric AGENT_DISCOVERY_INTERVAL_MS', () => {
       process.env.AGENT_DISCOVERY_INTERVAL_MS = 'never';
       const config = loadConfig();
-      expect(config.agentDiscoveryIntervalMs).toBeNaN();
+      expect(config.agentDiscoveryIntervalMs).toBe(300000);
     });
 
-    it('returns NaN for non-numeric AGENT_CONCURRENCY (Math.max with NaN)', () => {
+    it('falls back to default 1 for non-numeric AGENT_CONCURRENCY', () => {
       process.env.AGENT_CONCURRENCY = 'many';
       const config = loadConfig();
-      // Math.max(1, NaN) returns NaN in JavaScript
-      expect(config.agentConcurrency).toBeNaN();
+      expect(config.agentConcurrency).toBe(1);
     });
 
     it('truncates decimal API_PORT to integer', () => {
       process.env.API_PORT = '3000.75';
       const config = loadConfig();
       expect(config.apiPort).toBe(3000);
+    });
+
+    it('falls back to default for empty string API_PORT', () => {
+      process.env.API_PORT = '';
+      const config = loadConfig();
+      expect(config.apiPort).toBe(3000);
+    });
+
+    it('falls back to default for whitespace-only AGENT_CONCURRENCY', () => {
+      process.env.AGENT_CONCURRENCY = '   ';
+      const config = loadConfig();
+      expect(config.agentConcurrency).toBe(1);
     });
   });
 

@@ -260,3 +260,19 @@
   - All 241 tests pass across 10 test suites, TypeScript build clean
   - Files changed: src/tests/generator.test.ts, README.md,
     resources/PRD.md (task added + marked complete), resources/progress.txt
+
+2026-02-14 - Fix B7: Config NaN bug — non-numeric env vars produce NaN instead of defaults
+  - Root cause: parseInt() returns NaN for non-numeric strings, and Math.max(1, NaN) = NaN
+    - API_PORT="abc" → config.apiPort = NaN → server.listen(NaN) fails
+    - AGENT_CONCURRENCY="many" → config.agentConcurrency = NaN → batch slicing breaks
+    - AGENT_DISCOVERY_INTERVAL_MS="never" → config.agentDiscoveryIntervalMs = NaN → sleep(NaN) fails
+  - Added safeParseInt() helper in config.ts:
+    - Returns default value when env var is undefined, empty, or non-numeric
+    - Applied to apiPort, agentDiscoveryIntervalMs, and agentConcurrency
+  - Fixed config.test.ts: 5 tests previously asserted NaN as expected behavior (codifying the bug)
+    - Changed to assert correct fallback-to-default behavior
+    - Added 2 new edge case tests: empty string and whitespace-only values
+    - Renamed describe block from "parseInt edge cases" to "non-numeric environment variable handling"
+  - All 243 tests pass across 10 test suites, TypeScript build clean
+  - Files changed: src/config.ts, src/tests/config.test.ts, README.md,
+    resources/PRD.md (task added + marked complete), resources/progress.txt
