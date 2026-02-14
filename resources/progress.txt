@@ -173,3 +173,28 @@
   - All 154 tests pass across 8 test suites, TypeScript build clean
   - Files changed: src/api/routes.ts, src/tests/api.test.ts,
     resources/PRD.md (task added + marked complete), resources/progress.txt
+
+2026-02-14 - Fix B6: Retry resets attempt counter + DELETE cleans up IDL/doc files
+  - Fixed retry attempt counter bug in Store.addToQueue():
+    - When a failed program was re-added (retry), status was reset to 'pending'
+      but attempts count was preserved from previous failures
+    - With MAX_ATTEMPTS=10, a program that failed 9 times would get only 1 retry
+      instead of a fresh budget of 10 attempts
+    - Now resets attempts to 0 on re-add, giving a full retry budget
+  - Fixed DELETE endpoint file orphaning:
+    - DELETE /api/programs/:id removed program from index and queue
+      but left IDL cache (idls/<id>.json) and doc (docs/<id>.json) files on disk
+    - Added Store.removeDocs() and Store.removeIdlCache() methods
+    - DELETE route now cleans up all associated files
+  - Fixed stale TODO.md checkboxes (T7, B4, I4, I5 were completed but unchecked)
+  - Added 6 new tests:
+    1. Store: resets attempt counter to zero when re-adding a failed item
+    2. Store: removes docs file from disk
+    3. Store: removeDocs is a no-op when docs do not exist
+    4. Store: removes IDL cache file from disk
+    5. Store: removeIdlCache is a no-op when IDL does not exist
+    6. API: cleans up IDL cache and doc files on delete
+  - Updated README.md: test counts (160 across 8 suites), store (31 tests), API (18 tests)
+  - All 160 tests pass across 8 test suites, TypeScript build clean
+  - Files changed: src/store/index.ts, src/api/routes.ts, src/tests/store.test.ts,
+    src/tests/api.test.ts, TODO.md, README.md, resources/PRD.md, resources/progress.txt

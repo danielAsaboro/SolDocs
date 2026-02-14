@@ -107,14 +107,14 @@ Each program goes through a 4-pass Claude AI analysis:
 ## Testing
 
 ```bash
-npm test           # Run all tests (147 tests across 8 suites)
+npm test           # Run all tests (160 tests across 8 suites)
 npm run test:watch # Watch mode
 ```
 
 Test coverage includes:
 - **Agent** (41 tests) — Lifecycle, concurrency, webhooks, discovery, error handling, IDL changes, max retry limits
-- **Store** (26 tests) — CRUD, queue management, mutex locking, corrupt JSON recovery, path traversal security
-- **API** (17 tests) — All endpoints, validation, search, pagination
+- **Store** (31 tests) — CRUD, queue management, mutex locking, corrupt JSON recovery, path traversal security, file cleanup
+- **API** (18 tests) — All endpoints, validation, search, pagination, file cleanup on DELETE
 - **IDL parsing** (9 tests) — All Anchor format offsets, edge cases
 - **Solana client** (7 tests) — Retry logic, exponential backoff
 - **Config** (25 tests) — Required env vars, defaults, optional vars, concurrency bounds, parseInt edge cases
@@ -183,7 +183,7 @@ src/
 │   ├── index.html
 │   ├── styles.css
 │   └── app.js
-└── tests/                   # 147 tests across 8 suites
+└── tests/                   # 160 tests across 8 suites
 ```
 
 ## Security

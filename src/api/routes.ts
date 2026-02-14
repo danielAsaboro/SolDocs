@@ -160,6 +160,8 @@ export function createRoutes(store: Store, agent: Agent): Router {
       }
       await store.removeProgramSafe(id);
       await store.removeFromQueueSafe(id);
+      store.removeDocs(id);
+      store.removeIdlCache(id);
       res.json({ message: 'Program deleted' });
     } catch {
       res.status(400).json({ error: 'Invalid program ID' });

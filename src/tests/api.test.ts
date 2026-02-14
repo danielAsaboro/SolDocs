@@ -309,6 +309,30 @@ describe('API Routes', () => {
       expect(data.message).toBe('Program deleted');
       expect(store.getProgram(VALID_ID)).toBeUndefined();
     });
+
+    it('cleans up IDL cache and doc files on delete', async () => {
+      store.saveProgram({
+        programId: VALID_ID, name: 'test', description: '', instructionCount: 0,
+        accountCount: 0, status: 'documented', idlHash: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      });
+      store.saveIdlCache(VALID_ID, { name: 'test', version: '0.1.0', instructions: [{ name: 'init', accounts: [], args: [] }] });
+      store.saveDocs({
+        programId: VALID_ID, name: 'test', overview: 'o', instructions: 'i', accounts: 'a',
+        security: 's', fullMarkdown: '# Full', generatedAt: new Date().toISOString(), idlHash: 'h',
+      });
+
+      // Verify files exist before delete
+      expect(store.getIdlCache(VALID_ID)).not.toBeNull();
+      expect(store.getDocs(VALID_ID)).not.toBeNull();
+
+      const { status } = await request(server, 'DELETE', `/api/programs/${VALID_ID}`);
+      expect(status).toBe(200);
+
+      // Verify all associated files are cleaned up
+      expect(store.getProgram(VALID_ID)).toBeUndefined();
+      expect(store.getIdlCache(VALID_ID)).toBeNull();
+      expect(store.getDocs(VALID_ID)).toBeNull();
+    });
   });
 
   describe('GET /api/queue', () => {
