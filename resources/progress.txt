@@ -152,3 +152,24 @@
   - All 147 tests pass across 8 test suites, TypeScript build clean
   - Files changed: src/agent/core.ts, src/tests/agent.test.ts,
     resources/PRD.md (task added + marked complete), resources/progress.txt
+
+2026-02-14 - Fix B5: API input validation hardening (NaN pagination, search param type safety)
+  - Fixed NaN pagination bug in GET /api/programs:
+    - parseInt() on non-numeric page/limit params (e.g., "abc") returned NaN
+    - Math.max(1, NaN) = NaN, causing Array.slice(NaN, NaN) to silently return all results
+    - Added Number.isNaN() guards with fallback to defaults (page=1, limit=50)
+  - Fixed search parameter type safety:
+    - Express parses duplicate query params (?search=a&search=b) as an array
+    - Casting array to string via `as string` would fail on .toLowerCase()
+    - Added typeof check to safely coerce non-string search params to empty string
+  - Added 7 new tests in src/tests/api.test.ts:
+    1. Defaults page to 1 when page param is non-numeric
+    2. Defaults limit to 50 when limit param is non-numeric
+    3. Clamps page to minimum of 1 for negative values
+    4. Clamps limit to range [1, 100]
+    5. Returns empty array for page beyond total pages
+    6. Handles both page and limit as non-numeric gracefully
+    7. Ignores non-string search param (duplicate query params)
+  - All 154 tests pass across 8 test suites, TypeScript build clean
+  - Files changed: src/api/routes.ts, src/tests/api.test.ts,
+    resources/PRD.md (task added + marked complete), resources/progress.txt
