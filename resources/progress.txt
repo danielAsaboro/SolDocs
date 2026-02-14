@@ -198,3 +198,23 @@
   - All 160 tests pass across 8 test suites, TypeScript build clean
   - Files changed: src/store/index.ts, src/api/routes.ts, src/tests/store.test.ts,
     src/tests/api.test.ts, TODO.md, README.md, resources/PRD.md, resources/progress.txt
+
+2026-02-14 - Add T9: AI client tests in src/tests/ai-client.test.ts
+  - Created dedicated test file for src/ai/client.ts (previously had ZERO test coverage)
+  - Added 22 tests across 5 describe blocks:
+    1. Constructor (1 test): verifies Anthropic client receives correct API key
+    2. Success path (6 tests): text response extraction, custom maxTokens, default maxTokens,
+       empty content array, no text block returns empty string, multiple content blocks
+    3. Rate limiting (2 tests): enforces 500ms minimum interval between calls,
+       no delay when calls are spaced > 500ms apart
+    4. Retry logic (11 tests): retries on 429/529/500 errors, exponential backoff (2s/4s),
+       throws after 3 failed attempts, does not retry on 401/400/validation errors,
+       preserves original error object, throws last error after exhausting retries,
+       handles empty error message gracefully
+    5. Model configuration (1 test): verifies claude-sonnet-4-5-20250929 model is used
+  - Mock pattern: vi.mock('@anthropic-ai/sdk') with shared mockCreate function,
+    vi.useFakeTimers for rate limiting and retry delay testing
+  - Updated README.md: test counts (182 across 9 suites), added AI client test suite description
+  - All 182 tests pass across 9 test suites, TypeScript build clean
+  - Files changed: src/tests/ai-client.test.ts (new), README.md,
+    resources/PRD.md (task added + marked complete), resources/progress.txt

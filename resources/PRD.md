@@ -11,3 +11,4 @@
 - [x] Add I7: Max retry limit for failed programs (MAX_ATTEMPTS=10, permanent failure + queue removal)
 - [x] Fix B5: API input validation hardening (NaN pagination, search param type safety)
 - [x] Fix B6: Retry resets attempt counter + DELETE cleans up IDL/doc files
+- [x] Add T9: AI client tests in `src/tests/ai-client.test.ts` (22 tests for rate limiting, retries, error handling)
