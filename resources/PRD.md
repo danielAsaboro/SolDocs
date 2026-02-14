@@ -6,3 +6,4 @@
 - [x] Add I5: Agent concurrency (AGENT_CONCURRENCY env, Promise.allSettled)
 - [x] Verify all tests pass (75+), build clean, web UI loads
 - [x] Prepare deployment artifacts (Dockerfile, docker-compose, README update)
+- [x] Add I6: Startup connection validation (RPC + API key check on boot)

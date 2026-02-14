@@ -107,7 +107,7 @@ Each program goes through a 4-pass Claude AI analysis:
 ## Testing
 
 ```bash
-npm test           # Run all tests (111 tests across 6 suites)
+npm test           # Run all tests (117 tests across 7 suites)
 npm run test:watch # Watch mode
 ```
 
@@ -117,6 +117,7 @@ Test coverage includes:
 - **API** (17 tests) — All endpoints, validation, search, pagination
 - **IDL parsing** (9 tests) — All Anchor format offsets, edge cases
 - **Solana client** (7 tests) — Retry logic, exponential backoff
+- **Startup** (6 tests) — RPC connection validation, API key format checks
 - **Doc generator** (5 tests) — Full pipeline, batching, IDL v2 format
 
 ## Deployment
@@ -181,11 +182,12 @@ src/
 │   ├── index.html
 │   ├── styles.css
 │   └── app.js
-└── tests/                   # 111 tests across 6 suites
+└── tests/                   # 117 tests across 7 suites
 ```
 
 ## Security
 
+- Startup validation of Solana RPC connectivity and API key format
 - Path traversal prevention via base58 ID validation
 - XSS protection via DOMPurify on all rendered markdown
 - Request body size limits (5MB)

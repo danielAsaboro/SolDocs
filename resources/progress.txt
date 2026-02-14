@@ -95,3 +95,23 @@
   - All 111 tests pass across 6 test suites, TypeScript build clean
   - Files changed: Dockerfile, .dockerignore (new), docker-compose.yml (new), README.md,
     resources/PRD.md (task marked complete)
+
+2026-02-14 - Add I6: Startup connection validation (RPC + API key check on boot)
+  - Added validateConnections() exported function to src/index.ts:
+    - Tests Solana RPC connectivity via getVersion() with retry logic at startup
+    - Logs Solana core version on success, throws descriptive error on failure
+    - Validates Anthropic API key format (sk-ant- prefix check), warns if invalid
+    - Fails fast at startup instead of silently failing later during processing
+  - Enhanced startup logging: now shows concurrency setting and webhook URL
+  - Created src/tests/startup.test.ts with 6 new tests:
+    1. Succeeds when RPC returns a valid version
+    2. Throws when RPC connection fails
+    3. Throws with RPC URL included in error message
+    4. Warns when API key does not start with sk-ant-
+    5. Does not warn when API key has correct prefix
+    6. Logs the Solana version from the RPC response
+  - Updated README.md: test counts (117 across 7 suites), startup test suite,
+    security section mentions startup validation
+  - All 117 tests pass across 7 test suites, TypeScript build clean
+  - Files changed: src/index.ts, src/tests/startup.test.ts (new), README.md,
+    resources/PRD.md (task added + marked complete), resources/progress.txt
