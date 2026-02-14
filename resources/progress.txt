@@ -115,3 +115,22 @@
   - All 117 tests pass across 7 test suites, TypeScript build clean
   - Files changed: src/index.ts, src/tests/startup.test.ts (new), README.md,
     resources/PRD.md (task added + marked complete), resources/progress.txt
+
+2026-02-14 - Add T8: Config module tests in src/tests/config.test.ts
+  - Created dedicated test file for src/config.ts (previously had ZERO test coverage)
+  - Added 25 tests across 6 describe blocks:
+    1. Required environment variables (6 tests): throws on missing/empty SOLANA_RPC_URL
+       and ANTHROPIC_API_KEY, loads values correctly
+    2. Default values (5 tests): verifies apiPort=3000, discoveryInterval=300000,
+       webhookUrl=null, agentConcurrency=1, dataDir=src/data
+    3. Optional environment variables (4 tests): reads API_PORT, AGENT_DISCOVERY_INTERVAL_MS,
+       WEBHOOK_URL, AGENT_CONCURRENCY from env
+    4. agentConcurrency minimum enforcement (3 tests): enforces min=1 for 0 and negative,
+       allows values > 1
+    5. parseInt edge cases (5 tests): leading zeros, non-numeric strings return NaN,
+       Math.max(1,NaN) behavior, decimal truncation
+    6. Config interface completeness (2 tests): all expected fields present, no extra fields
+  - Updated README.md: test counts (142 across 8 suites), added config test suite description
+  - All 142 tests pass across 8 test suites, TypeScript build clean
+  - Files changed: src/tests/config.test.ts (new), README.md,
+    resources/PRD.md (task added + marked complete), resources/progress.txt

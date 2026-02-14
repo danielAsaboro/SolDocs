@@ -7,3 +7,4 @@
 - [x] Verify all tests pass (75+), build clean, web UI loads
 - [x] Prepare deployment artifacts (Dockerfile, docker-compose, README update)
 - [x] Add I6: Startup connection validation (RPC + API key check on boot)
+- [x] Add T8: Config module tests in `src/tests/config.test.ts` (25 tests)
