@@ -9,6 +9,8 @@ import { seedQueueIfEmpty, checkForUpgrades } from './discovery';
 import { AgentState, AgentError, QueueItem, getIdlName, Documentation } from '../types';
 import { sendWebhookNotification } from './webhook';
 
+export const MAX_ATTEMPTS = 10;
+
 export class Agent {
   private config: Config;
   private store: Store;
@@ -129,6 +131,27 @@ export class Agent {
   }
 
   private async processProgramSafe(item: QueueItem): Promise<void> {
+    // Check if this program has exceeded the max retry limit
+    if (item.attempts >= MAX_ATTEMPTS) {
+      const msg = `Permanently failed after ${item.attempts} attempts`;
+      console.error(`[Agent] ${item.programId}: ${msg}. Removing from queue.`);
+      await this.store.saveProgramSafe({
+        programId: item.programId,
+        name: item.programId.slice(0, 8) + '...',
+        description: '',
+        instructionCount: 0,
+        accountCount: 0,
+        status: 'failed',
+        idlHash: '',
+        createdAt: item.addedAt,
+        updatedAt: new Date().toISOString(),
+        errorMessage: msg,
+      });
+      await this.store.removeFromQueueSafe(item.programId);
+      this.addError(item.programId, msg);
+      return;
+    }
+
     try {
       await this.processProgram(item.programId);
     } catch (error) {

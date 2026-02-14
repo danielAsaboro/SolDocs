@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { Agent } from '../agent/core';
+import { Agent, MAX_ATTEMPTS } from '../agent/core';
 import { Store } from '../store';
 import { SolanaClient } from '../solana/client';
 import { AIClient } from '../ai/client';
@@ -785,6 +785,88 @@ describe('Agent', () => {
       } finally {
         globalThis.fetch = originalFetch;
       }
+    });
+  });
+
+  // ===== MAX RETRY LIMIT TESTS =====
+
+  describe('max retry limit (MAX_ATTEMPTS)', () => {
+    it('exports MAX_ATTEMPTS constant set to 10', () => {
+      expect(MAX_ATTEMPTS).toBe(10);
+    });
+
+    it('removes program from queue after reaching MAX_ATTEMPTS', async () => {
+      // Add item to queue and manually set attempts to MAX_ATTEMPTS
+      store.addToQueue(VALID_ID);
+      store.updateQueueItem(VALID_ID, { status: 'pending', attempts: MAX_ATTEMPTS });
+
+      const agent = new Agent(config, store, solana, mockAi as unknown as AIClient);
+      const startPromise = agent.start();
+      await new Promise(r => setTimeout(r, 300));
+      agent.stop();
+      await startPromise;
+
+      // Item should be removed from queue (not left as failed)
+      const queueItem = store.getQueue().find(q => q.programId === VALID_ID);
+      expect(queueItem).toBeUndefined();
+
+      // Program should be marked as permanently failed in index
+      const program = store.getProgram(VALID_ID);
+      expect(program).toBeDefined();
+      expect(program!.status).toBe('failed');
+      expect(program!.errorMessage).toContain('Permanently failed');
+      expect(program!.errorMessage).toContain(`${MAX_ATTEMPTS} attempts`);
+    });
+
+    it('records an error in agent state when max attempts exceeded', async () => {
+      store.addToQueue(VALID_ID);
+      store.updateQueueItem(VALID_ID, { status: 'pending', attempts: MAX_ATTEMPTS });
+
+      const agent = new Agent(config, store, solana, mockAi as unknown as AIClient);
+      const startPromise = agent.start();
+      await new Promise(r => setTimeout(r, 300));
+      agent.stop();
+      await startPromise;
+
+      const state = agent.getState();
+      const maxAttemptErrors = state.errors.filter(e =>
+        e.programId === VALID_ID && e.message.includes('Permanently failed')
+      );
+      expect(maxAttemptErrors.length).toBe(1);
+    });
+
+    it('does not call AI when max attempts already exceeded', async () => {
+      // Even with a cached IDL, the program should be skipped entirely
+      store.saveIdlCache(VALID_ID, MOCK_IDL);
+      store.addToQueue(VALID_ID);
+      store.updateQueueItem(VALID_ID, { status: 'pending', attempts: MAX_ATTEMPTS });
+
+      const agent = new Agent(config, store, solana, mockAi as unknown as AIClient);
+      const startPromise = agent.start();
+      await new Promise(r => setTimeout(r, 300));
+      agent.stop();
+      await startPromise;
+
+      // AI should never have been called
+      expect(mockAi.callCount).toBe(0);
+    });
+
+    it('still processes programs below the attempt limit', async () => {
+      store.saveIdlCache(VALID_ID, MOCK_IDL);
+      store.addToQueue(VALID_ID);
+      store.updateQueueItem(VALID_ID, { status: 'pending', attempts: MAX_ATTEMPTS - 1 });
+
+      const agent = new Agent(config, store, solana, mockAi as unknown as AIClient);
+      const startPromise = agent.start();
+      await new Promise(r => setTimeout(r, 300));
+      agent.stop();
+      await startPromise;
+
+      // Program should be documented (AI was called)
+      const program = store.getProgram(VALID_ID);
+      expect(program).toBeDefined();
+      expect(program!.status).toBe('documented');
+      expect(mockAi.callCount).toBeGreaterThan(0);
     });
   });
 

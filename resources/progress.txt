@@ -134,3 +134,21 @@
   - All 142 tests pass across 8 test suites, TypeScript build clean
   - Files changed: src/tests/config.test.ts (new), README.md,
     resources/PRD.md (task added + marked complete), resources/progress.txt
+
+2026-02-14 - Add I7: Max retry limit for failed programs (MAX_ATTEMPTS=10)
+  - Added exported MAX_ATTEMPTS constant (10) to src/agent/core.ts
+  - Added attempt limit check at the start of processProgramSafe():
+    - When item.attempts >= MAX_ATTEMPTS, program is marked permanently failed
+    - Failed program is saved to index with descriptive errorMessage
+    - Item is removed from queue entirely (stops infinite retry loops)
+    - Error recorded in agent state for visibility
+    - AI is never called for programs that exceeded the limit
+  - Added 5 new tests in src/tests/agent.test.ts (max retry limit):
+    1. Exports MAX_ATTEMPTS constant set to 10
+    2. Removes program from queue after reaching MAX_ATTEMPTS
+    3. Records error in agent state when max attempts exceeded
+    4. Does not call AI when max attempts already exceeded
+    5. Still processes programs below the attempt limit (attempts = MAX_ATTEMPTS - 1)
+  - All 147 tests pass across 8 test suites, TypeScript build clean
+  - Files changed: src/agent/core.ts, src/tests/agent.test.ts,
+    resources/PRD.md (task added + marked complete), resources/progress.txt

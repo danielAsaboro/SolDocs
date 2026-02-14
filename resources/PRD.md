@@ -8,3 +8,4 @@
 - [x] Prepare deployment artifacts (Dockerfile, docker-compose, README update)
 - [x] Add I6: Startup connection validation (RPC + API key check on boot)
 - [x] Add T8: Config module tests in `src/tests/config.test.ts` (25 tests)
+- [x] Add I7: Max retry limit for failed programs (MAX_ATTEMPTS=10, permanent failure + queue removal)
