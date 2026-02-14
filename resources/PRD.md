@@ -13,3 +13,4 @@
 - [x] Fix B6: Retry resets attempt counter + DELETE cleans up IDL/doc files
 - [x] Add T9: AI client tests in `src/tests/ai-client.test.ts` (22 tests for rate limiting, retries, error handling)
 - [x] Add T10: Webhook module tests in `src/tests/webhook.test.ts` (19 tests for payload structure, error handling, edge cases)
+- [x] Add T11: Expanded DocGenerator + prompt template tests in `src/tests/generator.test.ts` (40 new tests for error propagation, markdown structure, validation warnings, batch separators, prompt content)

@@ -235,3 +235,28 @@
   - All 201 tests pass across 10 test suites, TypeScript build clean
   - Files changed: src/tests/webhook.test.ts (new), README.md,
     resources/PRD.md (task added + marked complete), resources/progress.txt
+
+2026-02-14 - Add T11: Expanded DocGenerator + prompt template tests in src/tests/generator.test.ts
+  - Expanded from 5 tests to 45 tests (40 new) across 7 describe blocks:
+    1. Existing tests (5 tests): complete docs, AI call count, batch count, no accounts, IDL v2
+    2. Error propagation (4 tests): AI errors propagate from overview, instruction,
+       accounts, and security passes
+    3. fullMarkdown structure (6 tests): top-level heading, program ID in blockquote,
+       section headings (Instructions, Accounts & Types, Security Analysis),
+       SolDocs attribution in header/footer, section separators, generatedAt in header
+    4. generatedAt field (2 tests): valid ISO 8601, recent timestamp
+    5. Instruction batch separators (2 tests): multi-batch joins with ---, single batch has none
+    6. validateDoc warnings (3 tests): short docs warning, no code blocks warning,
+       no warning when docs are good
+    7. Edge cases (6 tests): events-only IDL, errors-only IDL, empty arrays for all optional
+       fields, exactly 5 instructions (single batch boundary), exactly 6 instructions (two batches)
+  - Added Prompt templates describe block with 4 sub-describes:
+    8. overviewPrompt (7 tests): program ID, name, instruction/account/error counts,
+       zero defaults for missing fields, 15000-char IDL truncation, Markdown section requests
+    9. instructionsPrompt (3 tests): program name, instruction JSON, TypeScript example request
+    10. accountsPrompt (4 tests): account types JSON, errors JSON, events inclusion/exclusion
+    11. securityPrompt (4 tests): program ID, name, security sections, IDL truncation, disclaimer
+  - Updated README.md: test counts (241 across 10 suites), generator (45 tests)
+  - All 241 tests pass across 10 test suites, TypeScript build clean
+  - Files changed: src/tests/generator.test.ts, README.md,
+    resources/PRD.md (task added + marked complete), resources/progress.txt

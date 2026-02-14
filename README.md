@@ -107,7 +107,7 @@ Each program goes through a 4-pass Claude AI analysis:
 ## Testing
 
 ```bash
-npm test           # Run all tests (201 tests across 10 suites)
+npm test           # Run all tests (241 tests across 10 suites)
 npm run test:watch # Watch mode
 ```
 
@@ -119,7 +119,7 @@ Test coverage includes:
 - **Solana client** (7 tests) — Retry logic, exponential backoff
 - **Config** (25 tests) — Required env vars, defaults, optional vars, concurrency bounds, parseInt edge cases
 - **Startup** (6 tests) — RPC connection validation, API key format checks
-- **Doc generator** (5 tests) — Full pipeline, batching, IDL v2 format
+- **Doc generator** (45 tests) — Full pipeline, batching, IDL v2 format, error propagation, markdown structure, validation warnings, prompt template content verification
 - **AI client** (22 tests) — Rate limiting, retry logic (429/529/500), exponential backoff, error handling, model configuration
 - **Webhook** (19 tests) — Payload structure, overview truncation, instruction count parsing, HTTP error handling, timeout, edge cases
 
@@ -185,7 +185,7 @@ src/
 │   ├── index.html
 │   ├── styles.css
 │   └── app.js
-└── tests/                   # 201 tests across 10 suites
+└── tests/                   # 241 tests across 10 suites
 ```
 
 ## Security
