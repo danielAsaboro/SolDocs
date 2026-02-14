@@ -218,3 +218,20 @@
   - All 182 tests pass across 9 test suites, TypeScript build clean
   - Files changed: src/tests/ai-client.test.ts (new), README.md,
     resources/PRD.md (task added + marked complete), resources/progress.txt
+
+2026-02-14 - Add T10: Webhook module tests in src/tests/webhook.test.ts
+  - Created dedicated test file for src/agent/webhook.ts (previously only tested indirectly via agent integration tests)
+  - Added 19 tests across 6 describe blocks:
+    1. Payload structure (4 tests): verifies all WebhookPayload fields, POST method, JSON content-type,
+       correct webhook URL, valid ISO timestamp
+    2. Overview truncation (2 tests): truncates overview to 500 chars, sends full overview when shorter
+    3. Instruction count parsing (3 tests): counts ### headers correctly, returns 1 when no headers,
+       handles 5+ headers
+    4. Error handling (6 tests): throws on HTTP 500/404/403 errors, propagates ECONNREFUSED,
+       propagates DNS resolution errors, accepts 201 as success
+    5. Timeout (1 test): verifies AbortSignal is passed to fetch
+    6. Edge cases (3 tests): empty instructions string returns count=1, empty overview string,
+       preserves programId and name from documentation
+  - All 201 tests pass across 10 test suites, TypeScript build clean
+  - Files changed: src/tests/webhook.test.ts (new), README.md,
+    resources/PRD.md (task added + marked complete), resources/progress.txt

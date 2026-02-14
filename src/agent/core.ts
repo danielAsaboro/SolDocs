@@ -6,7 +6,7 @@ import { DocGenerator } from '../docs/generator';
 import { fetchIdl } from '../solana/idl';
 import { fetchProgramInfo } from '../solana/program-info';
 import { seedQueueIfEmpty, checkForUpgrades } from './discovery';
-import { AgentState, AgentError, QueueItem, getIdlName, Documentation } from '../types';
+import { AgentState, AgentError, QueueItem, ProgramMetadata, getIdlName, Documentation } from '../types';
 import { sendWebhookNotification } from './webhook';
 
 export const MAX_ATTEMPTS = 10;
@@ -135,18 +135,7 @@ export class Agent {
     if (item.attempts >= MAX_ATTEMPTS) {
       const msg = `Permanently failed after ${item.attempts} attempts`;
       console.error(`[Agent] ${item.programId}: ${msg}. Removing from queue.`);
-      await this.store.saveProgramSafe({
-        programId: item.programId,
-        name: item.programId.slice(0, 8) + '...',
-        description: '',
-        instructionCount: 0,
-        accountCount: 0,
-        status: 'failed',
-        idlHash: '',
-        createdAt: item.addedAt,
-        updatedAt: new Date().toISOString(),
-        errorMessage: msg,
-      });
+      await this.store.saveProgramSafe(this.buildFailedMetadata(item, msg));
       await this.store.removeFromQueueSafe(item.programId);
       this.addError(item.programId, msg);
       return;
@@ -162,20 +151,30 @@ export class Agent {
         attempts: item.attempts + 1,
         lastError: msg,
       });
-      await this.store.saveProgramSafe({
-        programId: item.programId,
-        name: item.programId.slice(0, 8) + '...',
-        description: '',
-        instructionCount: 0,
-        accountCount: 0,
-        status: 'failed',
-        idlHash: '',
-        createdAt: item.addedAt,
-        updatedAt: new Date().toISOString(),
-        errorMessage: msg,
-      });
+      await this.store.saveProgramSafe(this.buildFailedMetadata(item, msg));
       this.addError(item.programId, msg);
     }
+  }
+
+  /**
+   * Build a failed ProgramMetadata entry, preserving existing metadata
+   * (name, description, counts) if the program was previously documented.
+   * This prevents data loss when a re-queued documented program fails.
+   */
+  private buildFailedMetadata(item: QueueItem, errorMessage: string): ProgramMetadata {
+    const existing = this.store.getProgram(item.programId);
+    return {
+      programId: item.programId,
+      name: existing?.name || item.programId.slice(0, 8) + '...',
+      description: existing?.description || '',
+      instructionCount: existing?.instructionCount || 0,
+      accountCount: existing?.accountCount || 0,
+      status: 'failed',
+      idlHash: existing?.idlHash || '',
+      createdAt: existing?.createdAt || item.addedAt,
+      updatedAt: new Date().toISOString(),
+      errorMessage,
+    };
   }
 
   private async processProgram(programId: string): Promise<void> {

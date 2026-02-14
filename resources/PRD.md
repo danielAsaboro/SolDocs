@@ -12,3 +12,4 @@
 - [x] Fix B5: API input validation hardening (NaN pagination, search param type safety)
 - [x] Fix B6: Retry resets attempt counter + DELETE cleans up IDL/doc files
 - [x] Add T9: AI client tests in `src/tests/ai-client.test.ts` (22 tests for rate limiting, retries, error handling)
+- [x] Add T10: Webhook module tests in `src/tests/webhook.test.ts` (19 tests for payload structure, error handling, edge cases)
