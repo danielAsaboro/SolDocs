@@ -1,0 +1,39 @@
+{
+  "name": "soldocs",
+  "version": "1.0.0",
+  "description": "Autonomous Solana Program Explorer & Documentation Agent",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "@solana/web3.js": "^1.98.4",
+    "isomorphic-dompurify": "^3.0.0-rc.2",
+    "marked": "^17.0.2",
+    "next": "16.1.6",
+    "pako": "^2.1.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-syntax-highlighter": "^16.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/dompurify": "^3.0.5",
+    "@types/node": "^20",
+    "@types/pako": "^2.0.4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^1.6.0"
+  }
+}
