@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-sol-purple: #9945FF;
+  --color-sol-green: #14F195;
+  --color-sol-dark: #0e0e1a;
+  --color-sol-darker: #080812;
+  --color-sol-card: #161625;
+  --color-sol-border: #2a2a3e;
+  --color-sol-text: #e0e0ef;
+  --color-sol-muted: #8888a0;
+  --color-sol-link: #b380ff;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+body {
+  background: var(--color-sol-darker);
+  color: var(--color-sol-text);
+  min-height: 100vh;
+}
+
+/* Markdown prose styles for documentation content */
+.prose-soldocs {
+  line-height: 1.7;
+}
+
+.prose-soldocs h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.prose-soldocs h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+  color: var(--color-sol-green);
+}
+
+.prose-soldocs h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.prose-soldocs p {
+  margin-bottom: 0.75rem;
+}
+
+.prose-soldocs ul,
+.prose-soldocs ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-soldocs li {
+  margin-bottom: 0.25rem;
+}
+
+.prose-soldocs a {
+  color: var(--color-sol-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-soldocs a:hover {
+  color: var(--color-sol-purple);
+}
+
+.prose-soldocs code {
+  background: rgba(153, 69, 255, 0.1);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: var(--font-mono);
+}
+
+.prose-soldocs pre {
+  background: var(--color-sol-darker);
+  border: 1px solid var(--color-sol-border);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.prose-soldocs pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.prose-soldocs table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.prose-soldocs th {
+  background: var(--color-sol-darker);
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 2px solid var(--color-sol-border);
+  font-weight: 600;
+}
+
+.prose-soldocs td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-sol-border);
+}
+
+.prose-soldocs blockquote {
+  border-left: 3px solid var(--color-sol-purple);
+  padding-left: 1rem;
+  color: var(--color-sol-muted);
+  margin-bottom: 0.75rem;
+}
+
+.prose-soldocs hr {
+  border: none;
+  border-top: 1px solid var(--color-sol-border);
+  margin: 2rem 0;
+}
+
+/* Status dot pulse animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-glow {
+  animation: pulse 2s infinite;
+}
