@@ -3,13 +3,25 @@
 import type { AgentState } from "@/lib/types";
 import { Card } from "@/components/ui/Card";
 import { StatusDot } from "@/components/ui/StatusDot";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { timeAgo, formatNumber } from "@/lib/utils";
 
 export function AgentStatusCard({ status }: { status: AgentState | null }) {
   if (!status) {
     return (
       <Card className="mb-8">
-        <p className="text-center text-sol-muted">Loading agent status...</p>
+        <div className="mb-4 flex items-center gap-3">
+          <Skeleton className="h-4 w-4 rounded-full" />
+          <Skeleton className="h-5 w-32" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i}>
+              <Skeleton className="mb-1 h-7 w-12" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
       </Card>
     );
   }

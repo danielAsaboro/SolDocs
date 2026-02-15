@@ -31,22 +31,29 @@ export function DocTabs({
 
   return (
     <>
-      <div className="mb-6 flex items-center gap-0 overflow-x-auto border-b border-sol-border">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              "whitespace-nowrap border-b-2 px-5 py-3 text-sm transition-colors",
-              activeTab === tab.key
-                ? "border-sol-green text-sol-green"
-                : "border-transparent text-sol-muted hover:text-sol-text"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-        <DownloadButton markdown={docs.fullMarkdown} filename={programName} />
+      {/* Tab bar — scrollable on mobile, with download button below on small screens */}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-0">
+        <div className="flex items-center gap-0 overflow-x-auto border-b border-sol-border scrollbar-thin">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                "whitespace-nowrap border-b-2 px-4 py-3 text-sm transition-colors sm:px-5",
+                activeTab === tab.key
+                  ? "border-sol-green text-sol-green"
+                  : "border-transparent text-sol-muted hover:text-sol-text"
+              )}
+              aria-selected={activeTab === tab.key}
+              role="tab"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="sm:ml-auto">
+          <DownloadButton markdown={docs.fullMarkdown} filename={programName} />
+        </div>
       </div>
 
       {activeTab === "idl" ? (

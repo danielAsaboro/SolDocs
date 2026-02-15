@@ -135,3 +135,42 @@ body {
 .animate-pulse-glow {
   animation: pulse 2s infinite;
 }
+
+/* Toast slide-up animation */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out;
+}
+
+/* Custom scrollbar for code/pre blocks and horizontal scroll areas */
+.prose-soldocs pre::-webkit-scrollbar,
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.prose-soldocs pre::-webkit-scrollbar-track,
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.prose-soldocs pre::-webkit-scrollbar-thumb,
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-sol-border);
+  border-radius: 3px;
+}
+
+.prose-soldocs pre::-webkit-scrollbar-thumb:hover,
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--color-sol-muted);
+}

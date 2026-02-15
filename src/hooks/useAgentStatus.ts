@@ -3,11 +3,15 @@
 import { useState, useEffect } from "react";
 import type { AgentState } from "@/lib/types";
 import { getAgentStatus } from "@/lib/api";
+import { usePageVisible } from "./usePageVisible";
 
 export function useAgentStatus(intervalMs = 10000) {
   const [status, setStatus] = useState<AgentState | null>(null);
+  const visible = usePageVisible();
 
   useEffect(() => {
+    if (!visible) return;
+
     let mounted = true;
 
     async function poll() {
@@ -25,7 +29,7 @@ export function useAgentStatus(intervalMs = 10000) {
       mounted = false;
       clearInterval(id);
     };
-  }, [intervalMs]);
+  }, [intervalMs, visible]);
 
   return status;
 }

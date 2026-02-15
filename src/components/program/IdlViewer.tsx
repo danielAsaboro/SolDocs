@@ -3,6 +3,7 @@
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import json from "react-syntax-highlighter/dist/esm/languages/hljs/json";
 import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import { CopyButton } from "@/components/ui/CopyButton";
 
 SyntaxHighlighter.registerLanguage("json", json);
 
@@ -10,7 +11,10 @@ export function IdlViewer({ idl }: { idl: unknown }) {
   const code = JSON.stringify(idl, null, 2);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-sol-border">
+    <div className="relative overflow-hidden rounded-xl border border-sol-border">
+      <div className="absolute right-3 top-3 z-10">
+        <CopyButton text={code} />
+      </div>
       <SyntaxHighlighter
         language="json"
         style={atomOneDark}

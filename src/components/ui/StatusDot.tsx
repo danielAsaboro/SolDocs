@@ -9,6 +9,8 @@ export function StatusDot({ active }: { active: boolean }) {
           ? "bg-sol-green shadow-[0_0_6px_var(--color-sol-green)] animate-pulse-glow"
           : "bg-sol-muted"
       )}
+      role="status"
+      aria-label={active ? "Agent running" : "Agent stopped"}
     />
   );
 }
